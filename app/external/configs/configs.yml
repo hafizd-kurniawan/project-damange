@@ -1,0 +1,18 @@
+model1:
+  configPath: configs/nanodet-m256.yml
+  modelPath: models/nanodet_m256.pth
+
+model2:
+  configPath: configs/nanodet-plus-m-1.5x_256-ppe.yml
+  modelPath: models/nanodet_plus256.pth
+
+webcam: 1                 # 0 = default webcam, 1 = external cam, atau ganti ke "video.mp4"
+threshold: 0.75           # Confidence score threshold untuk menampilkan deteksi
+
+liveDetection: true       # Aktifkan deteksi real-time saat streaming
+
+saveResult: false         # Simpan hasil video deteksi? true/false
+
+logGps: true              # Aktifkan logging koordinat GPS real-time
+device: cpu               # CPU/GPU
+logPath: logs/detection_log.json

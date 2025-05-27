@@ -1,0 +1,57 @@
+<div id="reports-tab" class="tab-content p-6">
+	<div class="flex justify-between items-center mb-6">
+		<h2 class="text-xl font-semibold text-gray-800">Damage Reports</h2>
+		<div class="flex space-x-3">
+			<button class="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-100 flex items-center">
+				<i class="fas fa-filter mr-2"></i> Filter
+			</button>
+			<button class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center">
+				<i class="fas fa-file-export mr-2"></i> Export
+			</button>
+		</div>
+	</div>
+
+	<div class="bg-white rounded-lg shadow overflow-hidden">
+		<div class="p-4 border-b flex justify-between items-center">
+			<div class="flex items-center space-x-4">
+				<div class="relative">
+					<input type="text" placeholder="Search reports..."
+						class="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+					<i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+				</div>
+			</div>
+			<div class="text-sm text-gray-500">
+				Showing <span id="reports-range" class="font-medium">1-5</span> of <span id="total-reports"
+					class="font-medium">12</span> reports
+			</div>
+		</div>
+
+		<div class="overflow-x-auto">
+			<table class="min-w-full">
+				<thead class="bg-gray-50">
+					<tr>
+						<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+							Report ID</th>
+						<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+							Location</th>
+						<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+							Damage Type</th>
+						<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo
+						</th>
+						<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date
+						</th>
+						<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+							Actions</th>
+					</tr>
+				</thead>
+				<tbody id="reports-list" class="bg-white divide-y divide-gray-200">
+					<!-- Data will be loaded here -->
+				</tbody>
+			</table>
+		</div>
+
+		<div id="reports-pagination" class="pagination px-6 py-4 border-t"></div>
+	</div>
+</div>
+</div>
+</div>

@@ -1,0 +1,103 @@
+<div id="upload-tab" class="tab-content p-6">
+	<h2 class="text-xl font-semibold text-gray-800 mb-6">Manual Damage Report Upload</h2>
+
+	<form id="upload-form" class="space-y-6">
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+			<div>
+				<label class="block text-gray-700 mb-2">Damage Type</label>
+				<select id="upload-damage-type"
+					class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+					<option value="">Select damage type</option>
+					<option value="road">Road Damage</option>
+					<option value="bridge">Bridge Damage</option>
+					<option value="building">Building Damage</option>
+					<option value="utility">Utility Damage</option>
+					<option value="other">Other</option>
+				</select>
+			</div>
+
+			<!-- <div>
+				<label class="block text-gray-700 mb-2">Severity Level</label>
+				<select id="upload-severity"
+					class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+					<option value="low">Low</option>
+					<option value="medium" selected>Medium</option>
+					<option value="high">High</option>
+					<option value="critical">Critical</option>
+				</select>
+			</div> -->
+		</div>
+
+		<div>
+			<label class="block text-gray-700 mb-2">Location Coordinates</label>
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<input type="text" id="upload-lat" placeholder="Latitude"
+					class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+				<input type="text" id="upload-lng" placeholder="Longitude"
+					class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+			</div>
+			<div class="flex space-x-3 mt-2">
+				<button type="button" id="get-location-btn"
+					class="mt-2 text-blue-500 hover:text-blue-700 text-sm flex items-center">
+					<i class="fas fa-location-arrow mr-1"></i> Get Current Location
+				</button>
+				<button type="button" id="select-on-map-btn"
+					class="mt-2 text-blue-500 hover:text-blue-700 text-sm flex items-center">
+					<i class="fas fa-map-marker-alt mr-1"></i> Select on Map
+				</button>
+			</div>
+		</div>
+
+		<div>
+			<label class="block text-gray-700 mb-2">Description</label>
+			<textarea id="upload-description" rows="4"
+				class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+				placeholder="Provide detailed description of the damage..."></textarea>
+		</div>
+
+		<div>
+			<label class="block text-gray-700 mb-2">Upload Evidence</label>
+			<div class="file-upload" id="file-upload-area">
+				<div class="space-y-2">
+					<i class="fas fa-cloud-upload-alt text-4xl text-gray-400"></i>
+					<p class="font-medium">Drag & drop files here or click to browse</p>
+					<p class="text-sm text-gray-500">Supports JPG, PNG, PDF (Max 10MB each)</p>
+				</div>
+				<input type="file" id="file-input" class="hidden" multiple>
+			</div>
+			<div id="file-preview" class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3"></div>
+		</div>
+
+		<div class="flex justify-end space-x-3">
+			<button type="reset" class="px-6 py-2 border rounded-lg text-gray-700 hover:bg-gray-100">Reset</button>
+			<button type="submit"
+				class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center">
+				<i class="fas fa-paper-plane mr-2"></i> Submit Report
+			</button>
+		</div>
+	</form>
+	<div id="map-selection-modal"
+		class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden modal-backdrop">
+		<div class="bg-white rounded-lg shadow-xl w-full max-w-4xl modal-content">
+			<div class="px-6 py-4 border-b">
+				<h3 class="text-lg font-semibold">Select Damage Location</h3>
+			</div>
+			<div class="p-6 space-y-4">
+				<div id="selection-map" style="height: 400px;"></div>
+				<div class="grid grid-cols-2 gap-4">
+					<input type="text" id="selection-lat" placeholder="Latitude"
+						class="px-4 py-2 border rounded-lg w-full">
+					<input type="text" id="selection-lng" placeholder="Longitude"
+						class="px-4 py-2 border rounded-lg w-full">
+				</div>
+			</div>
+			<div class="px-6 py-4 border-t flex justify-end space-x-3">
+				<button id="cancel-selection"
+					class="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-100">Cancel</button>
+				<button id="confirm-selection"
+					class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Confirm
+					Location</button>
+			</div>
+		</div>
+	</div>
+</div>

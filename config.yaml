@@ -1,0 +1,14 @@
+# damage_reporter_step_by_step/config.yaml
+database:
+  url: "sqlite:///./damage_app_sqlite.db" # Path ke file database SQLite
+
+uploads:
+  directory: "media_uploads"
+
+
+detector:
+  model: "app/external/models/nanodet_plus256.pth"
+  config: "app/external/configs/nanodet-plus-m-1.5x_256-ppe.yml"
+  webcam: 1                 # 0 = default webcam, 1 = external cam, atau ganti ke "video.mp4"
+  threshold: 0.01           # Confidence score threshold untuk menampilkan deteksi
+  device: "cpu"               # CPU/GPU
