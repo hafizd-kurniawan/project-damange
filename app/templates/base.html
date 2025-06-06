@@ -426,6 +426,8 @@
 
 		// URL base untuk API kita (akan digunakan oleh JavaScript di bawah)
 		const API_BASE_URL = "{{ request.url_for('read_root') }}api"; // Menghasilkan http://host:port/api
+        const BASE_URL = "{{ request.url_for('read_root') }}"; // Menghasilkan http://host:port/
+
 		// Atau jika Anda tahu pasti:
 		// const API_BASE_URL = "http://localhost:8000/api"; // Sesuaikan jika perlu
 

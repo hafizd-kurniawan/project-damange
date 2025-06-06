@@ -1,39 +1,38 @@
 # app/routers/websockets_router.py
+
+import base64
+import json
+import time
+from pathlib import Path
 from typing import Optional
+
+import cv2
+import numpy as np
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
     status,
 )
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-import json
-import base64
-import time
-import numpy as np
-import cv2
-from pathlib import Path
 
-
-from ..core.config import UPLOAD_FILES_DIRECTORY, DETECTOR_SETTINGS
-from ..schemas.report_schema import ReportCreate
-from ..services.report_services import ReportService
-
+from ..core.config import DETECTOR_SETTINGS, UPLOAD_FILES_DIRECTORY
 from ..core.database import SessionLocal  # Untuk membuat sesi DB baru
-from ..schemas.report_schema import ReportCreate  # Skema Pydantic untuk membuat laporan
-from ..models.report_model import *  # Untuk tipe return dan Enum jika perlu
-
 
 # --- Modifikasi Impor dan Inisialisasi Model NanoDet ---
 # Asumsikan struktur dan cara kerja modul eksternal Anda
 # try:
 # Impor kelas Predictor dan fungsi/variabel konfigurasi yang relevan
 from ..external.inference.predictor import Predictor  # Ini harusnya kelas
-from ..external.nanodet.nanodet.util import (
+from ..external.nanodet.nanodet.util import (  # Sesuaikan path jika perlu
     Logger,
     cfg,
     load_config,
-)  # Sesuaikan path jika perlu
+)
+from ..models.report_model import *  # Untuk tipe return dan Enum jika perlu
+from ..schemas.report_schema import ReportCreate  # Skema Pydantic untuk membuat laporan
+from ..services.report_services import ReportService
 
 detector_settings = DETECTOR_SETTINGS
 model = detector_settings.model
@@ -52,7 +51,6 @@ router = APIRouter(tags=["WebSocket Detection"])
 
 @router.websocket("")
 async def websocket_detection_endpoint(websocket: WebSocket):
-    print("WS Client terhubung ke /ws/detect")
     await websocket.accept()
     print("WS Client terhubung ke /ws/detect")
 
@@ -65,8 +63,6 @@ async def websocket_detection_endpoint(websocket: WebSocket):
         return
 
     ws_result_save_dir = UPLOAD_FILES_DIRECTORY
-    print("============ wsss ")
-    print(ws_result_save_dir)
     ws_result_save_dir.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -79,7 +75,6 @@ async def websocket_detection_endpoint(websocket: WebSocket):
 
                 image_data_base64 = payload.get("image")
                 location = payload.get("location", {"lat": None, "lon": None})
-                print("masuk while true")
 
                 if not image_data_base64:  # dst. (seperti kode Anda)
                     await websocket.send_text(
@@ -112,7 +107,6 @@ async def websocket_detection_endpoint(websocket: WebSocket):
                     cfg.class_names,
                     threshold,
                 )
-                print(class_text)
             except Exception as e:
                 print(f"WS Error saat inferensi atau visualisasi: {e}")
                 await websocket.send_text(
@@ -145,7 +139,6 @@ async def websocket_detection_endpoint(websocket: WebSocket):
                         class_text,
                         "/uploads/" + result_filename.name,
                     )
-                    print(f"Disimpan: @ {location}")
 
                 await websocket.send_text(
                     f"data:image/jpeg;base64,{encoded_result_str}"
@@ -231,7 +224,6 @@ async def save_report_from_detection(
             severity=DamageSeverityEnum.medium,  # Default, atau bisa dari hasil deteksi jika ada
             description=f"{description_prefix} pada {time.strftime('%Y-%m-%d %H:%M:%S')}",
         )
-        print(report_create_schema)
 
         # 2. Buat instance ReportService dengan sesi DB yang baru dibuat
         report_service = ReportService(db=db)

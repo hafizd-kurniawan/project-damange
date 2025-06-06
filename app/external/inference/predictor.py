@@ -2,15 +2,14 @@ import os
 import time
 
 import cv2
-from nanodet.util.visualization import overlay_bbox_cv
 import torch
-
 from nanodet.data.batch_process import stack_batch_img
 from nanodet.data.collate import naive_collate
 from nanodet.data.transform import Pipeline
 from nanodet.model.arch import build_model
 from nanodet.util import Logger, cfg, load_config, load_model_weight
 from nanodet.util.path import mkdir
+from nanodet.util.visualization import overlay_bbox_cv
 
 image_ext = [".jpg", ".jpeg", ".webp", ".bmp", ".png"]
 video_ext = ["mp4", "mov", "avi", "mkv"]
@@ -79,7 +78,6 @@ class Predictor(object):
         for label in dets:
             for bbox in dets[label]:
                 score = bbox[-1]
-                print("score", score)
                 if score > score_thresh:
                     x0, y0, x1, y1 = [int(i) for i in bbox[:4]]
                     all_box.append([label, x0, y0, x1, y1, score])
