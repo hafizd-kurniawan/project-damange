@@ -64,6 +64,9 @@
 		const uploadSeveritySelect = document.getElementById('upload-severity');
 		const uploadLatInput = document.getElementById('upload-lat');
 		const uploadLngInput = document.getElementById('upload-lng');
+		const manualUploadForm = document.getElementById('upload-form');
+		const analyzeBtn = document.getElementById('analyze-btn');
+		const submitReportBtn = document.getElementById('submit-report-btn');
 		const uploadDescriptionTextarea = document.getElementById('upload-description');
 		const manualUploadFileInput = document.getElementById('file-input'); // Input file di tab manual upload
 		const manualUploadFilePreview = document.getElementById('file-preview');
@@ -184,41 +187,80 @@
 			}
 		}
 
-		function getSeverityClass(severity) {
-			if (severity === 'low') return 'bg-green-100 text-green-800';
-			if (severity === 'medium') return 'bg-yellow-100 text-yellow-800';
-			if (severity === 'high') return 'bg-orange-100 text-orange-800';
-			if (severity === 'critical') return 'bg-red-100 text-red-800';
-			return 'bg-gray-100 text-gray-800';
-		}
-		function getStatusClass(status) {
-			if (status === 'pending') return 'bg-gray-100 text-gray-800';
-			if (status === 'in_review') return 'bg-blue-100 text-blue-800';
-			if (status === 'in_progress') return 'bg-purple-100 text-purple-800';
-			if (status === 'completed') return 'bg-green-100 text-green-800';
-			return 'bg-gray-100 text-gray-800';
-		}
-
 		function renderPaginationControls(elementId, totalPages, currentPage, tableType) {
 			const paginationContainer = document.getElementById(elementId);
-			paginationContainer.innerHTML = '';
+			paginationContainer.innerHTML = ''; // Bersihkan tombol yang ada
 			if (totalPages <= 1) return;
 
-			for (let i = 1; i <= totalPages; i++) {
-				const pageButton = document.createElement('button');
-				pageButton.textContent = i;
-				if (i === currentPage) pageButton.classList.add('active');
-				pageButton.addEventListener('click', async () => {
-					const newData = await fetchDamageReports(i, itemsPerPage);
-					if (tableType === 'damage') {
-						currentDamagePageOnMapTab = i;
-					} else {
-						currentReportsPageOnReportsTab = i;
-					}
-					renderAllComponents(newData, tableType); // Re-render semua termasuk marker
-				});
-				paginationContainer.appendChild(pageButton);
+			const maxButtons = 5; // Maksimal tombol halaman yang ditampilkan
+
+			// Helper function to create a button
+			function createButton(text, pageNumber, isDisabled = false, isActive = false) {
+				const button = document.createElement('button');
+				button.textContent = text;
+				button.disabled = isDisabled;
+				if (isActive) {
+					button.classList.add('active');
+				}
+				if (isDisabled) {
+					button.classList.add('disabled:opacity-50', 'cursor-not-allowed');
+				} else {
+					button.addEventListener('click', async () => {
+						const newData = await fetchDamageReports(pageNumber, itemsPerPage);
+						if (tableType === 'damage') {
+							currentDamagePageOnMapTab = pageNumber;
+						} else {
+							currentReportsPageOnReportsTab = pageNumber;
+						}
+						renderAllComponents(newData, tableType);
+					});
+				}
+				return button;
 			}
+
+			// Tombol "Sebelumnya"
+			paginationContainer.appendChild(createButton('‹ Prev', currentPage - 1, currentPage === 1));
+
+			if (totalPages <= maxButtons) {
+				// Tampilkan semua halaman jika totalnya kurang dari atau sama dengan maxButtons
+				for (let i = 1; i <= totalPages; i++) {
+					paginationContainer.appendChild(createButton(i, i, false, i === currentPage));
+				}
+			} else {
+				// Logika untuk menampilkan elipsis
+				let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+				let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+				if (endPage - startPage + 1 < maxButtons) {
+					startPage = Math.max(1, endPage - maxButtons + 1);
+				}
+
+				if (startPage > 1) {
+					paginationContainer.appendChild(createButton(1, 1));
+					if (startPage > 2) {
+						const ellipsis = document.createElement('span');
+						ellipsis.textContent = '...';
+						ellipsis.className = 'px-4 py-2';
+						paginationContainer.appendChild(ellipsis);
+					}
+				}
+
+				for (let i = startPage; i <= endPage; i++) {
+					paginationContainer.appendChild(createButton(i, i, false, i === currentPage));
+				}
+
+				if (endPage < totalPages) {
+					if (endPage < totalPages - 1) {
+						const ellipsis = document.createElement('span');
+						ellipsis.textContent = '...';
+						ellipsis.className = 'px-4 py-2';
+						paginationContainer.appendChild(ellipsis);
+					}
+					paginationContainer.appendChild(createButton(totalPages, totalPages));
+				}
+			}
+			// Tombol "Berikutnya"
+			paginationContainer.appendChild(createButton('Next ›', currentPage + 1, currentPage === totalPages));
 		}
 
 
@@ -368,7 +410,7 @@
 			formData.append('lat', markerLatInput.value);
 			formData.append('lng', markerLngInput.value);
 			formData.append('type', markerDamageTypeSelect.value); // 'type' akan dihandle aliasnya oleh Pydantic/FastAPI
-			formData.append('severity', markerSeveritySelect.value);
+			// formData.append('severity', markerSeveritySelect.value);
 			formData.append('description', markerDescriptionTextarea.value);
 
 			if (markerPhotoInput.files[0]) {
@@ -412,7 +454,7 @@
 				editLatInput.value = report.lat;
 				editLngInput.value = report.lng;
 				editDamageTypeSelect.value = report.damage_type; // Gunakan field asli dari API
-				editSeveritySelect.value = report.severity;
+				// editSeveritySelect.value = report.severity;
 				editDescriptionTextarea.value = report.description || '';
 				editStatusSelect.value = report.status;
 				// Untuk edit foto, mungkin perlu UI yang lebih kompleks atau serahkan ke tombol "upload new photo"
@@ -436,7 +478,7 @@
 				lat: parseFloat(editLatInput.value) || null,
 				lng: parseFloat(editLngInput.value) || null,
 				damage_type: editDamageTypeSelect.value || null, // Pydantic akan handle alias 'type'
-				severity: editSeveritySelect.value || null,
+				// severity: editSeveritySelect.value || null,
 				description: editDescriptionTextarea.value || null,
 				status: editStatusSelect.value || null
 			};
@@ -472,6 +514,107 @@
 			reportIdToDelete = null;
 		});
 
+
+		// 4. Reset form ke keadaan awal
+		manualUploadFilePreview.innerHTML = '';
+		analyzeBtn.disabled = true;
+		uploadDamageTypeSelect.disabled = true;
+		uploadDamageTypeSelect.value = "";
+		submitReportBtn.disabled = true;
+		// 1. Aktifkan tombol "Analisis" hanya jika ada file yang dipilih
+		manualUploadFileInput.addEventListener('change', function () {
+			manualUploadFilePreview.innerHTML = ''; // Bersihkan preview lama
+			if (this.files && this.files.length > 0) {
+				for (const file of this.files) {
+					const p = document.createElement('p');
+					p.textContent = file.name;
+					manualUploadFilePreview.appendChild(p);
+				}
+				analyzeBtn.disabled = false; // Aktifkan tombol analisis
+			} else {
+				analyzeBtn.disabled = true; // Nonaktifkan jika tidak ada file
+			}
+			// Pastikan tombol submit dan dropdown tetap nonaktif
+			submitReportBtn.disabled = true;
+			uploadDamageTypeSelect.disabled = true;
+			uploadDamageTypeSelect.value = ""; // Reset pilihan
+		});
+
+		// 2. Logika untuk tombol "Analisis Kerusakan"
+		analyzeBtn.addEventListener('click', async () => {
+
+			if (!manualUploadFileInput.files || manualUploadFileInput.files.length === 0) {
+				showSuccessModal("Silakan pilih file gambar terlebih dahulu.", false);
+				return;
+			}
+
+			const file = manualUploadFileInput.files[0];
+			const formData = new FormData();
+			formData.append('photo', file);
+
+			// Tampilkan status "menganalisis"
+			showSuccessModal("Menganalisis kerusakan pada gambar...", true);
+			analyzeBtn.disabled = true;
+			analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Menganalisis...';
+
+			try {
+				// Panggil API backend untuk analisis
+				const response = await fetch(`${API_BASE_URL}/reports/analyze-image`, {
+					method: 'POST',
+					body: formData,
+				});
+
+				// Tutup modal pesan loading
+				document.getElementById('close-success').click();
+
+				if (!response.ok) {
+					const errorData = await response.json().catch(() => ({ detail: "Gagal menganalisis gambar." }));
+					throw new Error(errorData.detail || `Error: ${response.status}`);
+				}
+
+				const result = await response.json(); // Hasilnya adalah: { detected_type: "pothole" }
+				const detectedType = result.detected_type;
+
+				showSuccessModal(`Analisis selesai! Terdeteksi: ${detectedType}. Silakan periksa dan submit.`, true);
+
+				// Aktifkan dropdown dan atur nilainya sesuai hasil
+				uploadDamageTypeSelect.disabled = false;
+
+				// Cek apakah hasil deteksi ada di dalam opsi dropdown
+				const optionExists = [...uploadDamageTypeSelect.options].some(opt => opt.value === detectedType);
+				if (optionExists) {
+					uploadDamageTypeSelect.value = detectedType;
+					submitReportBtn.disabled = false; // Aktifkan submit jika jenis terdeteksi
+				} else {
+					// Jika jenis kerusakan tidak ada di daftar, minta pengguna memilih manual
+					uploadDamageTypeSelect.value = ""; // Kosongkan pilihan
+					submitReportBtn.disabled = true;
+					showSuccessModal(`Deteksi: ${detectedType}. Jenis ini tidak ada di daftar, silakan pilih manual.`, false);
+				}
+
+			} catch (error) {
+				console.error("Error saat analisis:", error);
+				showSuccessModal(`Gagal menganalisis: ${error.message}`, false);
+				// Biarkan dropdown nonaktif jika analisis gagal
+				uploadDamageTypeSelect.disabled = true;
+				submitReportBtn.disabled = true;
+			} finally {
+				// Kembalikan tombol analisis ke keadaan semula
+				analyzeBtn.innerHTML = '<i class="fas fa-search-plus mr-2"></i> Analisis Kerusakan';
+				// Biarkan tombol analisis aktif lagi untuk mencoba lagi jika perlu
+				analyzeBtn.disabled = false;
+			}
+		});
+
+		// 3. Aktifkan/nonaktifkan tombol submit berdasarkan pilihan dropdown
+		uploadDamageTypeSelect.addEventListener('change', function () {
+			if (this.value) {
+				submitReportBtn.disabled = false;
+			} else {
+				submitReportBtn.disabled = true;
+			}
+		});
+
 		// Manual Upload Tab Form
 		document.getElementById('upload-form').addEventListener('submit', async function (e) {
 			e.preventDefault();
@@ -479,7 +622,6 @@
 			formData.append('lat', uploadLatInput.value);
 			formData.append('lng', uploadLngInput.value);
 			formData.append('type', uploadDamageTypeSelect.value);
-			formData.append('severity', uploadSeveritySelect.value);
 			formData.append('description', uploadDescriptionTextarea.value);
 			if (manualUploadFileInput.files[0]) {
 				formData.append('photo', manualUploadFileInput.files[0]);
@@ -490,7 +632,11 @@
 
 			await createReport(formData);
 			this.reset(); // Reset form
-			manualUploadFilePreview.innerHTML = ''; // Bersihkan preview file
+			manualUploadFilePreview.innerHTML = '';
+			analyzeBtn.disabled = true;
+			uploadDamageTypeSelect.disabled = true;
+			uploadDamageTypeSelect.value = "";
+			submitReportBtn.disabled = true;
 		});
 
 		// File input di Manual Upload Tab
@@ -712,66 +858,246 @@
 		const captureRealtimeBtn = document.getElementById('capture-realtime-btn');
 		const toggleRealtimeBtn = document.getElementById('toggle-realtime-btn');
 		const realtimeDetectionContainer = document.getElementById('realtime-detection-container');
-		const WS_BASE_URL = BASE_URL + "/ws"
+		const WS_URL = BASE_URL + "ws"
 
 		let currentRealtimeStream = null;
 		let realtimeClientLocation = { lat: null, lon: null };
 		let realtimeWsConnection = null;
+		let ws = null;
+		// let cameraStream = null;
+		let sendFrameIntervalId = null;
+		let latestDetections = [];
+		let animationFrameId = null;
+		let isStartingStream = false; //
 
-		let lastTableUpdateTime = 0;
-		const TABLE_UPDATE_INTERVAL = 3000; // ms
 
-		function updateDetectionTableIfAllowed(data) {
-			const now = Date.now();
-			if (now - lastTableUpdateTime > TABLE_UPDATE_INTERVAL) {
-				lastTableUpdateTime = now;
-				refreshActiveTabData(data); // ← fungsi kamu untuk update tab/tabel
+		//======================================================================
+		// REFERENSI ELEMEN DOM (DENGAN PENGECEKAN)
+		//======================================================================
+		// Memastikan elemen ada sebelum digunakan untuk mencegah error "null".
+		// const realtimeVideo = document.getElementById('realtime-video');
+		const overlayCanvas = document.getElementById('realtime-output');
+		const cameraSelect = document.getElementById('realtime-camera-select');
+		const startBtn = document.getElementById('start-realtime-btn');
+		const stopBtn = document.getElementById('stop-realtime-btn');
+		const toggleBtn = document.getElementById('toggle-realtime-btn');
+		const realtimeContainer = document.getElementById('realtime-detection-container');
+		// Konteks canvas hanya diambil jika canvas ada
+		const overlayCtx = overlayCanvas ? overlayCanvas.getContext('2d', { willReadFrequently: true }) : null;
+
+
+		//======================================================================
+		// REFERENSI ELEMEN DOM (DENGAN PENGECEKAN)
+		//======================================================================
+
+
+		//======================================================================
+		// FUNGSI KHUSUS UNTUK REAL-TIME DETECTION (FOKUS UTAMA)
+		//======================================================================
+
+		/**
+		 * Loop rendering utama. Menggambar kotak deteksi di atas video.
+		 */
+		function drawDetectionLoop() {
+			if (realtimeContainer && !realtimeContainer.classList.contains('hidden') && cameraStream) {
+				const videoWidth = realtimeVideo.videoWidth;
+				const videoHeight = realtimeVideo.videoHeight;
+
+				if (overlayCanvas.width !== videoWidth || overlayCanvas.height !== videoHeight) {
+					overlayCanvas.width = videoWidth;
+					overlayCanvas.height = videoHeight;
+				}
+
+				overlayCtx.clearRect(0, 0, videoWidth, videoHeight);
+
+				latestDetections.forEach(det => {
+					const [x1, y1, x2, y2] = det.box;
+					const score = (det.score * 100).toFixed(1);
+					const label = `${det.class_name} ${score}%`;
+
+					overlayCtx.strokeStyle = 'rgba(255, 26, 26, 0.9)';
+					overlayCtx.lineWidth = 3;
+					overlayCtx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+
+					overlayCtx.fillStyle = 'rgba(255, 26, 26, 0.9)';
+					overlayCtx.font = 'bold 16px sans-serif';
+					overlayCtx.fillText(label, x1, y1 > 20 ? y1 - 10 : y1 + 20);
+				});
+			}
+			animationFrameId = requestAnimationFrame(drawDetectionLoop);
+		}
+
+		/**
+		 * Mengambil snapshot dari video dan mengirimkannya ke server WebSocket.
+		 */
+		function sendFrameToServer() {
+			if (!ws || ws.readyState !== WebSocket.OPEN || !cameraStream || !realtimeVideo || realtimeVideo.videoWidth === 0) {
+				return;
+			}
+
+			const tempCanvas = document.createElement('canvas');
+			tempCanvas.width = realtimeVideo.videoWidth;
+			tempCanvas.height = realtimeVideo.videoHeight;
+			const tempCtx = tempCanvas.getContext('2d');
+			tempCtx.drawImage(realtimeVideo, 0, 0, tempCanvas.width, tempCanvas.height);
+
+			tempCanvas.toBlob(blob => {
+				if (blob && ws && ws.readyState === WebSocket.OPEN) {
+					ws.send(blob);
+				}
+			}, 'image/jpeg', 0.7);
+		}
+
+		/**
+		 * Mengatur event handler untuk koneksi WebSocket.
+		 */
+		function setupWebSocketHandlers(socket) {
+			socket.onopen = () => {
+				console.log("WebSocket terhubung. Memulai pengiriman frame...");
+				if (sendFrameIntervalId) clearInterval(sendFrameIntervalId);
+				sendFrameIntervalId = setInterval(sendFrameToServer, 150);
+			};
+
+			socket.onmessage = (event) => {
+				try {
+					const data = JSON.parse(event.data);
+					if (data.detections) {
+						latestDetections = data.detections;
+					}
+				} catch (e) {
+					console.error("Gagal mem-parse pesan WebSocket:", e);
+				}
+			};
+
+			socket.onclose = () => {
+				console.log("WebSocket terputus.");
+				// Tidak perlu memanggil stopRealtimeDetection() di sini karena
+				// stopRealtimeDetection() sendiri yang akan memicu onclose.
+			};
+
+			socket.onerror = (error) => {
+				console.error("WebSocket Error:", error);
+				stopRealtimeDetection();
+			};
+		}
+
+		/**
+		 * Menghentikan stream kamera, koneksi WebSocket, dan membersihkan semua state.
+		 * Fungsi ini dibuat agar aman untuk dipanggil beberapa kali.
+		 */
+		function stopRealtimeDetection() {
+			if (sendFrameIntervalId) {
+				clearInterval(sendFrameIntervalId);
+				sendFrameIntervalId = null;
+			}
+			if (ws) {
+				// Hapus event handler onclose sebelum menutup untuk mencegah loop
+				ws.onclose = null;
+				ws.close();
+				ws = null;
+			}
+			if (cameraStream) {
+				cameraStream.getTracks().forEach(track => track.stop());
+				cameraStream = null;
+			}
+
+			if (realtimeVideo) realtimeVideo.srcObject = null;
+			latestDetections = [];
+
+			if (overlayCtx) {
+				overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+			}
+
+			if (startBtn) startBtn.disabled = false;
+			if (stopBtn) stopBtn.disabled = true;
+		}
+
+		/**
+		 * Memulai stream kamera dan koneksi WebSocket. Ini adalah fungsi inti yang dipanggil oleh tombol Start.
+		 */
+		async function startRealtimeDetection() {
+			stopRealtimeDetection(); // Pastikan semua state lama dibersihkan
+
+			if (startBtn) {
+				startBtn.disabled = true;
+				startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memulai...';
+			}
+
+			try {
+				const constraints = { video: { facingMode: cameraSelect.value } };
+				cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+				realtimeVideo.srcObject = cameraStream;
+
+				// Tunggu hingga metadata video tersedia, baru play
+				await new Promise((resolve) => {
+					realtimeVideo.onloadedmetadata = () => {
+						resolve();
+					};
+				});
+
+				await realtimeVideo.play(); // Sekarang aman untuk play
+
+				if (stopBtn) stopBtn.disabled = false;
+
+				// Buat koneksi WebSocket baru
+				ws = new WebSocket(WS_URL);
+				setupWebSocketHandlers(ws);
+
+			} catch (err) {
+				console.error("Gagal memulai deteksi real-time:", err);
+				if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+					alert("Akses kamera ditolak. Harap berikan izin pada browser.");
+				} else if (err.name !== "AbortError") {
+					alert("Gagal mengakses kamera. Pastikan tidak ada aplikasi lain yang sedang menggunakannya.");
+				}
+				stopRealtimeDetection();
+			} finally {
+				if (startBtn) {
+					startBtn.innerHTML = 'Start Detection';
+					startBtn.disabled = !!cameraStream;
+				}
 			}
 		}
 
-		// Toggle realtime detection
-		toggleRealtimeBtn.addEventListener('click', () => {
-			if (realtimeDetectionContainer.classList.contains('hidden')) {
-				realtimeDetectionContainer.classList.remove('hidden');
-				toggleRealtimeBtn.innerHTML = '<i class="fas fa-eye-slash mr-2"></i> Hide Realtime Detection';
 
-				// Get user location for realtime detection
-				if (navigator.geolocation) {
-					navigator.geolocation.getCurrentPosition(
-						position => {
-							realtimeClientLocation.lat = position.coords.latitude;
-							realtimeClientLocation.lon = position.coords.longitude;
-							console.log("Realtime location found:", realtimeClientLocation);
-						},
-						error => {
-							console.warn("Failed to get realtime location:", error.message);
-						},
-						{ enableHighAccuracy: true }
-					);
+		//======================================================================
+		// PENDAFTARAN EVENT LISTENER (dengan pengecekan elemen)
+		//======================================================================
+
+		if (toggleBtn && realtimeContainer) {
+			toggleBtn.addEventListener('click', () => {
+				const isHidden = realtimeContainer.classList.toggle('hidden');
+				if (isHidden) {
+					stopRealtimeDetection();
+					toggleBtn.innerHTML = '<i class="fas fa-camera mr-2"></i> Aktifkan Deteksi Real-time';
+				} else {
+					toggleBtn.innerHTML = '<i class="fas fa-eye-slash mr-2"></i> Sembunyikan Deteksi Real-time';
 				}
+			});
+		}
+
+		if (startBtn) startBtn.addEventListener('click', startRealtimeDetection);
+		if (stopBtn) stopBtn.addEventListener('click', stopRealtimeDetection);
+		if (cameraSelect) cameraSelect.addEventListener('change', startRealtimeDetection);
+
+
+		//======================================================================
+		// INISIALISASI APLIKASI
+		//======================================================================
+		function initializeApp() {
+			console.log("Aplikasi Dimuat...");
+			if (realtimeVideo && overlayCanvas && cameraSelect && startBtn && stopBtn && toggleBtn && realtimeContainer) {
+				console.log("Fitur deteksi real-time diinisialisasi.");
+				drawDetectionLoop();
 			} else {
-				realtimeDetectionContainer.classList.add('hidden');
-				toggleRealtimeBtn.innerHTML = '<i class="fas fa-camera mr-2"></i> Enable Realtime Detection';
-
-				// Stop camera and detection if running
-				if (currentRealtimeStream) {
-					stopRealtimeMediaTracks(currentRealtimeStream);
-					currentRealtimeStream = null;
-					realtimeVideo.srcObject = null;
-				}
-
-				// Close WebSocket connection if open
-				if (realtimeWsConnection) {
-					realtimeWsConnection.close();
-					realtimeWsConnection = null;
-				}
+				console.error("Satu atau lebih elemen HTML untuk deteksi real-time tidak ditemukan. Fitur tidak akan aktif.");
 			}
-		});
-
-		function stopRealtimeMediaTracks(stream) {
-			stream.getTracks().forEach(track => track.stop());
+			// ... panggil fungsi inisialisasi lain di sini jika ada
 		}
 
+
+		// Camera type selection
 		async function startRealtimeCamera(facingMode) {
 			if (currentRealtimeStream) {
 				stopRealtimeMediaTracks(currentRealtimeStream);
@@ -791,107 +1117,6 @@
 			}
 		}
 
-
-		// === Variabel global untuk interval pengiriman dan koneksi WebSocket ===
-		let sendFrameIntervalId = null;
-		let realtimeWs = null;
-
-		function sendRealtimeFrameToWebSocket() {
-			if (!realtimeWs || realtimeWs.readyState !== WebSocket.OPEN) return;
-			if (!currentRealtimeStream || !realtimeVideo || realtimeVideo.readyState !== realtimeVideo.HAVE_ENOUGH_DATA) return;
-
-			realtimeCanvas.width = realtimeVideo.videoWidth;
-			realtimeCanvas.height = realtimeVideo.videoHeight;
-			realtimeCtx.drawImage(realtimeVideo, 0, 0, realtimeCanvas.width, realtimeCanvas.height);
-
-			const imageData = realtimeCanvas.toDataURL('image/jpeg', 0.5); // Kualitas gambar
-
-			const payload = {
-				image: imageData,
-				location: {
-					lat: realtimeClientLocation.lat,
-					lon: realtimeClientLocation.lon
-				}
-			};
-
-			realtimeWs.send(JSON.stringify(payload));
-		}
-
-		function connectRealtimeWebSocket() {
-			if (realtimeWs) {
-				realtimeWs.close();
-				realtimeWs = null;
-			}
-
-			realtimeWs = new WebSocket(WS_BASE_URL);
-
-			realtimeWs.onopen = () => {
-				console.log("WebSocket (realtime) terhubung ke server.");
-				if (sendFrameIntervalId) clearInterval(sendFrameIntervalId);
-				sendFrameIntervalId = setInterval(sendRealtimeFrameToWebSocket, 300); // 3 FPS
-			};
-
-			realtimeWs.onmessage = (event) => {
-				try {
-					const payload = JSON.parse(event.data);
-					if (payload.image) {
-						const img = new Image();
-						img.onload = () => {
-							realtimeOutput.width = img.width;
-							realtimeOutput.height = img.height;
-							realtimeOutCtx.clearRect(0, 0, img.width, img.height);
-							realtimeOutCtx.drawImage(img, 0, 0);
-						};
-
-						const activeTabElement = document.querySelector('.tab-btn.active-tab');
-						let activeTabName = activeTabElement ? activeTabElement.dataset.tab : 'map';
-						updateDetectionTableIfAllowed(activeTabName); // ganti ini dari refreshActiveTabData
-						img.src = payload.image;
-					} else {
-						console.warn("Payload tidak memiliki properti image.", payload);
-					}
-				} catch (e) {
-					// Jika gagal parsing JSON, mungkin data berupa base64 langsung
-					if (typeof event.data === 'string' && event.data.startsWith('data:image/jpeg;base64,')) {
-						const img = new Image();
-						img.onload = () => {
-							realtimeOutput.width = img.width;
-							realtimeOutput.height = img.height;
-							realtimeOutCtx.clearRect(0, 0, img.width, img.height);
-							realtimeOutCtx.drawImage(img, 0, 0);
-
-						};
-
-						const activeTabElement = document.querySelector('.tab-btn.active-tab');
-						let activeTabName = activeTabElement ? activeTabElement.dataset.tab : 'map';
-						updateDetectionTableIfAllowed(activeTabName); // ganti ini dari refreshActiveTabData
-						img.src = event.data;
-					} else {
-						console.warn("Data WS tidak bisa di-parse sebagai JSON:", event.data);
-					}
-				}
-			};
-
-			realtimeWs.onerror = (error) => {
-				console.error("WebSocket (realtime) Error:", error);
-				if (sendFrameIntervalId) clearInterval(sendFrameIntervalId);
-			};
-
-			realtimeWs.onclose = (event) => {
-				console.log("Koneksi WebSocket (realtime) ditutup. Kode:", event.code);
-				if (sendFrameIntervalId) clearInterval(sendFrameIntervalId);
-				sendFrameIntervalId = null;
-			};
-		}
-
-
-
-
-
-
-
-
-		// Camera type selection
 		realtimeCameraSelect.addEventListener('change', () => {
 			const selected = realtimeCameraSelect.value;
 			startRealtimeCamera(selected);
@@ -970,6 +1195,7 @@
 			renderAllComponents(initialData, 'map');
 		}
 		initialLoad();
+		initializeApp();
 
 	}); // Akhir dari DOMContentLoaded
 </script>

@@ -10,7 +10,7 @@ import shutil  # Untuk operasi file
 
 # Impor model database (SQLAlchemy) dan skema Pydantic
 # from .. import models_db  # Ini akan menyediakan models_db.Report
-from ..models.report_model import Report, DamageSeverityEnum, ReportStatusEnum
+from ..models.report_model import Report
 
 # Ini akan menyediakan schemas.ReportCreate, schemas.ReportUpdate
 from ..schemas.report_schema import *

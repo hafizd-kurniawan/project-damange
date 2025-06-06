@@ -3,7 +3,7 @@ from typing import Optional, List
 from datetime import date  # Untuk tipe data tanggal
 
 # Impor Enum dari model database kita agar Pydantic bisa memvalidasinya
-from ..models.report_model import DamageSeverityEnum, ReportStatusEnum
+# from ..models.report_model import ReportStatusEnum
 
 
 # Skema dasar untuk atribut inti dari sebuah laporan
@@ -20,7 +20,7 @@ class ReportBase(BaseModel):
         alias="type",
         description="Jenis kerusakan (misal: jalan, jembatan)",
     )
-    severity: DamageSeverityEnum = Field(..., description="Tingkat keparahan kerusakan")
+    # severity: DamageSeverityEnum = Field(..., description="Tingkat keparahan kerusakan")
     description: Optional[str] = Field(
         None, max_length=500, description="Deskripsi detail kerusakan (opsional)"
     )
@@ -47,9 +47,9 @@ class ReportUpdate(BaseModel):
     lat: Optional[float] = Field(None, ge=-90, le=90)
     lng: Optional[float] = Field(None, ge=-180, le=180)
     damage_type: Optional[str] = Field(None, min_length=3, max_length=100, alias="type")
-    severity: Optional[DamageSeverityEnum] = None
+    # severity: Optional[DamageSeverityEnum] = None
     description: Optional[str] = Field(None, max_length=500)
-    status: Optional[ReportStatusEnum] = None  # Status bisa diupdate
+    # status: Optional[ReportStatusEnum] = None  # Status bisa diupdate
     # photo_url tidak diupdate langsung via JSON di sini.
     # Update foto biasanya melibatkan unggahan file baru, yang akan ditangani terpisah.
 
@@ -63,7 +63,7 @@ class ReportUpdate(BaseModel):
 # Mewarisi field dari ReportBase dan menambahkan field yang di-generate server
 class ReportResponse(ReportBase):
     id: int
-    status: ReportStatusEnum
+    # status: ReportStatusEnum
     photo_url: Optional[str] = None
     date_reported: date
 
@@ -81,6 +81,10 @@ class ReportPaginatedResponse(BaseModel):
 
     class Config:
         from_attributes = True  # Jika 'reports' akan dibuat dari list objek ORM
+
+
+class AnalysisResponse(BaseModel):
+    detected_type: str
 
 
 print(f"OK: Skema Pydantic untuk Report didefinisikan di {__file__}")

@@ -11,18 +11,18 @@ from ..core.database import Base  # Impor Base dari app/core/database.py
 
 
 # Definisikan Enum untuk severity dan status menggunakan Python enum
-class DamageSeverityEnum(enum.Enum):
-    low = "low"
-    medium = "medium"
-    high = "high"
-    critical = "critical"
+# class DamageSeverityEnum(enum.Enum):
+#     low = "low"
+#     medium = "medium"
+#     high = "high"
+#     critical = "critical"
 
 
-class ReportStatusEnum(enum.Enum):
-    pending = "pending"
-    in_review = "in_review"
-    in_progress = "in_progress"
-    completed = "completed"
+# class ReportStatusEnum(enum.Enum):
+#     pending = "pending"
+#     in_review = "in_review"
+#     in_progress = "in_progress"
+#     completed = "completed"
 
 
 class Report(Base):
@@ -36,25 +36,25 @@ class Report(Base):
         String(100), index=True, nullable=False
     )  # Panjang string disarankan
 
-    severity: DamageSeverityEnum = Column(
-        SQLAlchemyEnum(
-            DamageSeverityEnum, name="damageseverityenum_dr", inherit_schema=True
-        ),  # 'name' penting untuk tipe Enum di DB
-        nullable=False,
-        default=DamageSeverityEnum.medium,  # Nilai default untuk kolom ini
-    )
+    # severity: DamageSeverityEnum = Column(
+    #     SQLAlchemyEnum(
+    #         DamageSeverityEnum, name="damageseverityenum_dr", inherit_schema=True
+    #     ),  # 'name' penting untuk tipe Enum di DB
+    #     nullable=False,
+    #     default=DamageSeverityEnum.medium,  # Nilai default untuk kolom ini
+    # )
 
     description: Optional[str] = Column(
         String(500), nullable=True
     )  # Kolom ini opsional
 
-    status: ReportStatusEnum = Column(
-        SQLAlchemyEnum(
-            ReportStatusEnum, name="reportstatusenum_dr", inherit_schema=True
-        ),
-        nullable=False,
-        default=ReportStatusEnum.pending,
-    )
+    # status: ReportStatusEnum = Column(
+    #     SQLAlchemyEnum(
+    #         ReportStatusEnum, name="reportstatusenum_dr", inherit_schema=True
+    #     ),
+    #     nullable=False,
+    #     default=ReportStatusEnum.pending,
+    # )
 
     photo_url: Optional[str] = Column(
         String(255), nullable=True

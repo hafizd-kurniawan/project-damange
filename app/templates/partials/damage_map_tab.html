@@ -2,20 +2,15 @@
   <!-- Map Tab Content -->
   <div class="mb-6 flex justify-between items-center">
     <h2 class="text-xl font-semibold text-gray-800">Damage Location Map</h2>
-    <button
-      id="toggle-realtime-btn"
-      class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center"
-    >
+    <button id="toggle-realtime-btn"
+      class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center">
       <i class="fas fa-camera mr-2"></i> Enable Realtime Detection
     </button>
   </div>
 
   <div id="realtime-detection-container" class="hidden">
     <h3 class="font-medium text-gray-700 mb-2">Realtime Damage Detection</h3>
-    <select
-      id="realtime-camera-select"
-      class="w-full px-4 py-2 border rounded-lg mb-2"
-    >
+    <select id="realtime-camera-select" class="w-full px-4 py-2 border rounded-lg mb-2">
       <option value="user">Front Camera</option>
       <option value="environment" selected="">Back Camera</option>
     </select>
@@ -25,35 +20,22 @@
       <canvas id="realtime-canvas" style="display: none"></canvas>
     </div>
     <div class="flex space-x-3 mt-2">
-      <button
-        type="button"
-        id="start-realtime-btn"
-        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center"
-      >
+      <button type="button" id="start-realtime-btn"
+        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center">
         <i class="fas fa-play mr-2"></i> Start Detection
       </button>
-      <button
-        type="button"
-        id="stop-realtime-btn"
-        class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 flex items-center"
-      >
+      <button type="button" id="stop-realtime-btn"
+        class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 flex items-center">
         <i class="fas fa-stop mr-2"></i> Stop
       </button>
-      <button
-        type="button"
-        id="capture-realtime-btn"
-        class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center"
-      >
+      <button type="button" id="capture-realtime-btn"
+        class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center">
         <i class="fas fa-camera mr-2"></i> Capture
       </button>
     </div>
   </div>
 
-  <div
-    id="map"
-    class="mb-6 rounded-lg overflow-hidden"
-    style="height: 500px"
-  ></div>
+  <div id="map" class="mb-6 rounded-lg overflow-hidden" style="height: 500px"></div>
 
   <div class="bg-gray-50 p-4 rounded-lg">
     <h3 class="font-medium text-lg mb-3">Damage Reports</h3>
@@ -73,13 +55,9 @@
           <!-- Data will be loaded here -->
         </tbody>
       </table>
-      <div
-        id="damage-pagination"
-        class="pagination mt-4 overflow-x-auto whitespace-nowrap"
-      >
+      <div id="damage-pagination" class="pagination mt-4 overflow-x-auto whitespace-nowrap">
         <div class="inline-flex space-x-2 px-2" id="pagination-buttons"></div>
       </div>
     </div>
   </div>
 </div>
-

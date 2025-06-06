@@ -180,4 +180,7 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 media_uploads/
-*.db
+.db
+*.jpeg
+*.jpg
+*.png
