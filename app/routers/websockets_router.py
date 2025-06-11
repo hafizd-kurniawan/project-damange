@@ -163,6 +163,49 @@ async def websocket_detection_endpoint(websocket: WebSocket):
         print("WS: Menutup koneksi /ws/detect (jika masih ada).")
 
 
+@router.post("/detect-image")
+async def detect_image(request):
+    payload = await request.json()
+    image_data_base64 = payload.get("image")
+    location = payload.get("location", {"lat": None, "lon": None})
+
+    if not image_data_base64:
+        raise HTTPException(status_code=400, detail="Image missing")
+
+    # Decode base64
+    header, encoded = image_data_base64.split(",", 1)
+    img_bytes = base64.b64decode(encoded)
+    np_arr = np.frombuffer(img_bytes, np.uint8)
+    img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+    # Detection
+    meta, res = predictor_instance.inference(img)
+    result_img = predictor_instance.visualize(res[0], meta, cfg.class_names, 0.35)
+
+    # Save image
+    timestamp = int(time.time() * 1000)
+    file_path = UPLOAD_FILES_DIRECTORY / f"frame_http_{timestamp}.jpg"
+    cv2.imwrite(str(file_path), result_img)
+
+    # Save to DB (seperti biasa)
+    db = SessionLocal()
+    report_service = ReportService(db=db)
+    report_create = ReportCreate(
+        lat=location.get("lat", 0.0),
+        lng=location.get("lon", 0.0),
+        type="road",  # atau infer dari klasifikasi
+        severity=DamageSeverityEnum.medium,
+    )
+    report_service.create_report_from_camera(report_create, str(file_path))
+    db.close()
+
+    # Encode result to base64 for frontend
+    _, buffer = cv2.imencode(".jpg", result_img)
+    encoded_result = base64.b64encode(buffer).decode("utf-8")
+
+    return {"result_image": f"data:image/jpeg;base64,{encoded_result}"}
+
+
 PATH_TO_YOUR_IMAGE = Path(
     "media_uploads/ws_detections/detected_frame_1748009805500.jpg"
 )

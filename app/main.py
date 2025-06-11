@@ -9,6 +9,8 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from pathlib import Path
+from fastapi.responses import HTMLResponse
+
 
 from .core.config import UPLOAD_FILES_DIRECTORY
 from .routers import reports_router
@@ -16,6 +18,8 @@ from .core import database
 from .routers import (
     websockets_router,
 )  # Pastikan websockets_router diimpor
+from .routers import location_router
+from .routers.video_detector import LocalDetection
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -59,6 +63,9 @@ else:
 
 app.include_router(reports_router.router, prefix="/api")
 app.include_router(websockets_router.router, prefix="/ws")
+app.include_router(location_router.router)
+
+detector = LocalDetection()
 
 
 # --- Endpoint untuk Menyajikan Halaman Utama ---
@@ -66,6 +73,21 @@ app.include_router(websockets_router.router, prefix="/ws")
 @app.get("/", tags=["Web Interface"], include_in_schema=False, name="read_root")
 async def serve_homepage(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+
+@app.get("/start-local-detection")
+def start_local_detection():
+    return detector.start()
+
+
+@app.get("/stop-local-detection")
+def stop_local_detection():
+    return detector.stop()
+
+
+@app.get("/send-location", response_class=HTMLResponse)
+async def send_location_page(request: Request):
+    return templates.TemplateResponse("send_location.html", {"request": request})
 
 
 # --- Health Check Endpoint (seperti sebelumnya) ---
