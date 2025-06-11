@@ -27,6 +27,8 @@ from ..schemas.report_schema import ReportCreate  # Skema Pydantic untuk membuat
 from ..services.report_services import ReportService
 
 from multiprocessing import Process, Event
+from .websockets_router import save_report_from_detection
+import asyncio  # Tambahkan di bagian import
 
 
 class LocalDetection:
@@ -44,6 +46,8 @@ class LocalDetection:
         self.predictor_instance = Predictor(
             self.cfg, self.model, self.logger, self.device
         )
+        self.ws_result_save_dir = UPLOAD_FILES_DIRECTORY
+        self.ws_result_save_dir.mkdir(parents=True, exist_ok=True)
 
     def start(self):
         if self.process and self.process.is_alive():
@@ -76,14 +80,42 @@ class LocalDetection:
                     break
 
                 location = get_last_location()
-                print(location)
                 meta, res = self.predictor_instance.inference(frame)
                 result_img, class_text = self.predictor_instance.visualize(
                     res[0], meta, self.cfg.class_names, DETECTOR_SETTINGS.threshold
                 )
 
-                print(f"📍 Lokasi: {get_last_location()}")
-                print(f"🧠 Deteksi: {class_text}")
+                if class_text is not None and class_text != "None":
+                    timestamp = int(time.time() * 1000)
+                    result_filename = (
+                        self.ws_result_save_dir / f"detected_frame_{timestamp}.jpg"
+                    )
+
+                    cv2.imwrite(str(result_filename), result_img)
+                    with open(self.ws_result_save_dir / "ws_gps_log.txt", "a") as f:
+                        f.write(
+                            f"{result_filename.name}, lat={location['lat']}, lon={location['lon']}\n"
+                        )
+
+                    try:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        loop.run_until_complete(
+                            save_report_from_detection(
+                                lat=location.get("lat"),
+                                lng=location.get("lon"),
+                                detected_damage_type=class_text,
+                                image_relative_url="/uploads/" + result_filename.name,
+                            )
+                        )
+                    except Exception as e:
+                        print(f"❌ Gagal simpan laporan: {e}")
+                    finally:
+                        loop.close()
+
+                    print(f"📍 Lokasi: {get_last_location()}")
+                    print(f"🧠 Deteksi: {class_text}")
+
                 cv2.waitKey(1)
 
         except Exception as e:

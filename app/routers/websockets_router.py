@@ -119,11 +119,11 @@ async def websocket_detection_endpoint(websocket: WebSocket):
 
             # ... (sisa logika encode hasil, simpan file, kirim ke klien seperti sebelumnya) ...
             try:
-                _, buffer = cv2.imencode(".jpg", result_img_visualized)
-                encoded_result_str = base64.b64encode(buffer).decode("utf-8")
-                timestamp = int(time.time() * 1000)
 
                 if class_text is not None and class_text != "None":
+                    _, buffer = cv2.imencode(".jpg", result_img_visualized)
+                    encoded_result_str = base64.b64encode(buffer).decode("utf-8")
+                    timestamp = int(time.time() * 1000)
                     result_filename = (
                         ws_result_save_dir / f"detected_frame_{timestamp}.jpg"
                     )
