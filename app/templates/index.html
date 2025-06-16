@@ -43,7 +43,6 @@
 		const markerLatInput = document.getElementById('marker-lat');
 		const markerLngInput = document.getElementById('marker-lng');
 		const markerDamageTypeSelect = document.getElementById('damage-type');
-		const markerSeveritySelect = document.getElementById('damage-severity');
 		const markerDescriptionTextarea = document.getElementById('damage-description');
 		const markerPhotoInput = document.getElementById('photo-input'); // Untuk file upload di modal
 		const markerCapturedPhotoImg = document.getElementById('captured-photo'); // Untuk hasil kamera di modal
@@ -54,19 +53,19 @@
 		const editLatInput = document.getElementById('edit-lat');
 		const editLngInput = document.getElementById('edit-lng');
 		const editDamageTypeSelect = document.getElementById('edit-damage-type');
-		const editSeveritySelect = document.getElementById('edit-severity');
 		const editDescriptionTextarea = document.getElementById('edit-description');
-		const editStatusSelect = document.getElementById('edit-status');
 		let editingReportId = null; // Untuk menyimpan ID laporan yang sedang diedit
 
 		// Input fields untuk Manual Upload Tab
 		const uploadDamageTypeSelect = document.getElementById('upload-damage-type');
-		const uploadSeveritySelect = document.getElementById('upload-severity');
 		const uploadLatInput = document.getElementById('upload-lat');
 		const uploadLngInput = document.getElementById('upload-lng');
 		const uploadDescriptionTextarea = document.getElementById('upload-description');
 		const manualUploadFileInput = document.getElementById('file-input'); // Input file di tab manual upload
 		const manualUploadFilePreview = document.getElementById('file-preview');
+		const manualUploadForm = document.getElementById('upload-form');
+		const analyzeBtn = document.getElementById('analyze-btn');
+		const submitReportBtn = document.getElementById('submit-report-btn');
 
 		// Elemen kamera
 		const cameraContainer = document.getElementById('camera-container');
@@ -182,21 +181,6 @@
 				document.getElementById('reports-range').textContent = `${(currentPage - 1) * itemsPerPage + 1}-${Math.min(currentPage * itemsPerPage, totalItems)}`;
 				document.getElementById('total-reports').textContent = totalItems;
 			}
-		}
-
-		function getSeverityClass(severity) {
-			if (severity === 'low') return 'bg-green-100 text-green-800';
-			if (severity === 'medium') return 'bg-yellow-100 text-yellow-800';
-			if (severity === 'high') return 'bg-orange-100 text-orange-800';
-			if (severity === 'critical') return 'bg-red-100 text-red-800';
-			return 'bg-gray-100 text-gray-800';
-		}
-		function getStatusClass(status) {
-			if (status === 'pending') return 'bg-gray-100 text-gray-800';
-			if (status === 'in_review') return 'bg-blue-100 text-blue-800';
-			if (status === 'in_progress') return 'bg-purple-100 text-purple-800';
-			if (status === 'completed') return 'bg-green-100 text-green-800';
-			return 'bg-gray-100 text-gray-800';
 		}
 
 		function renderPaginationControls(elementId, totalPages, currentPage, tableType) {
@@ -419,7 +403,6 @@
 			formData.append('lat', markerLatInput.value);
 			formData.append('lng', markerLngInput.value);
 			formData.append('type', markerDamageTypeSelect.value); // 'type' akan dihandle aliasnya oleh Pydantic/FastAPI
-			formData.append('severity', markerSeveritySelect.value);
 			formData.append('description', markerDescriptionTextarea.value);
 
 			if (markerPhotoInput.files[0]) {
@@ -463,9 +446,7 @@
 				editLatInput.value = report.lat;
 				editLngInput.value = report.lng;
 				editDamageTypeSelect.value = report.damage_type; // Gunakan field asli dari API
-				editSeveritySelect.value = report.severity;
 				editDescriptionTextarea.value = report.description || '';
-				editStatusSelect.value = report.status;
 				// Untuk edit foto, mungkin perlu UI yang lebih kompleks atau serahkan ke tombol "upload new photo"
 				editModalElement.classList.remove('hidden');
 			} catch (error) {
@@ -487,9 +468,7 @@
 				lat: parseFloat(editLatInput.value) || null,
 				lng: parseFloat(editLngInput.value) || null,
 				damage_type: editDamageTypeSelect.value || null, // Pydantic akan handle alias 'type'
-				severity: editSeveritySelect.value || null,
 				description: editDescriptionTextarea.value || null,
-				status: editStatusSelect.value || null
 			};
 			// Hapus field null agar tidak terkirim dan menimpa nilai yang ada dengan null
 			Object.keys(updatePayload).forEach(key => {
@@ -523,6 +502,112 @@
 			reportIdToDelete = null;
 		});
 
+		manualUploadFilePreview.innerHTML = '';
+		analyzeBtn.disabled = true;
+		uploadDamageTypeSelect.disabled = true;
+		uploadDamageTypeSelect.value = "";
+		submitReportBtn.disabled = true;
+		let analyzedImageBase64 = null;
+
+		// 1. Aktifkan tombol "Analisis" hanya jika ada file yang dipilih
+		manualUploadFileInput.addEventListener('change', function () {
+			manualUploadFilePreview.innerHTML = ''; // Bersihkan preview lama
+			if (this.files && this.files.length > 0) {
+				for (const file of this.files) {
+					const p = document.createElement('p');
+					p.textContent = file.name;
+					manualUploadFilePreview.appendChild(p);
+				}
+				analyzeBtn.disabled = false; // Aktifkan tombol analisis
+			} else {
+				analyzeBtn.disabled = true; // Nonaktifkan jika tidak ada file
+			}
+			// Pastikan tombol submit dan dropdown tetap nonaktif
+			submitReportBtn.disabled = true;
+			uploadDamageTypeSelect.disabled = true;
+			uploadDamageTypeSelect.value = ""; // Reset pilihan
+		});
+
+		// 2. Logika untuk tombol "Analisis Kerusakan"
+		analyzeBtn.addEventListener('click', async () => {
+
+			if (!manualUploadFileInput.files || manualUploadFileInput.files.length === 0) {
+				showSuccessModal("Silakan pilih file gambar terlebih dahulu.", false);
+				return;
+			}
+
+			const file = manualUploadFileInput.files[0];
+			const formData = new FormData();
+			formData.append('photo', file);
+
+			// Tampilkan status "menganalisis"
+			showSuccessModal("Menganalisis kerusakan pada gambar...", true);
+			analyzeBtn.disabled = true;
+			analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Menganalisis...';
+
+			try {
+				// Panggil API backend untuk analisis
+				const response = await fetch(`${API_BASE_URL}/reports/analyze-image`, {
+					method: 'POST',
+					body: formData,
+				});
+
+				// Tutup modal pesan loading
+				document.getElementById('close-success').click();
+
+				if (!response.ok) {
+					const errorData = await response.json().catch(() => ({ detail: "Gagal menganalisis gambar." }));
+					throw new Error(errorData.detail || `Error: ${response.status}`);
+				}
+
+				const result = await response.json(); // Hasilnya adalah: { detected_type: "pothole" }
+				const detectedType = result.detected_type;
+				// analyzedImageBase64 = result.image_base64; // simpan base64 yang sudah ada bbox
+				// if (analyzedImageBase64) {
+				// 	formData.append('image_base64', analyzedImageBase64);
+				// }
+
+
+				showSuccessModal(`Analisis selesai! Terdeteksi: ${detectedType}. Silakan periksa dan submit.`, true);
+
+				// Aktifkan dropdown dan atur nilainya sesuai hasil
+				uploadDamageTypeSelect.disabled = false;
+
+				// Cek apakah hasil deteksi ada di dalam opsi dropdown
+				const optionExists = [...uploadDamageTypeSelect.options].some(opt => opt.value === detectedType);
+				if (optionExists) {
+					uploadDamageTypeSelect.value = detectedType;
+					submitReportBtn.disabled = false; // Aktifkan submit jika jenis terdeteksi
+				} else {
+					// Jika jenis kerusakan tidak ada di daftar, minta pengguna memilih manual
+					uploadDamageTypeSelect.value = ""; // Kosongkan pilihan
+					submitReportBtn.disabled = true;
+					showSuccessModal(`Deteksi: ${detectedType}. Jenis ini tidak ada di daftar, silakan pilih manual.`, false);
+				}
+
+			} catch (error) {
+				console.error("Error saat analisis:", error);
+				showSuccessModal(`Gagal menganalisis: ${error.message}`, false);
+				// Biarkan dropdown nonaktif jika analisis gagal
+				uploadDamageTypeSelect.disabled = true;
+				submitReportBtn.disabled = true;
+			} finally {
+				// Kembalikan tombol analisis ke keadaan semula
+				analyzeBtn.innerHTML = '<i class="fas fa-search-plus mr-2"></i> Analisis Kerusakan';
+				// Biarkan tombol analisis aktif lagi untuk mencoba lagi jika perlu
+				analyzeBtn.disabled = false;
+			}
+		});
+
+		// 3. Aktifkan/nonaktifkan tombol submit berdasarkan pilihan dropdown
+		uploadDamageTypeSelect.addEventListener('change', function () {
+			if (this.value) {
+				submitReportBtn.disabled = false;
+			} else {
+				submitReportBtn.disabled = true;
+			}
+		});
+
 		// Manual Upload Tab Form
 		document.getElementById('upload-form').addEventListener('submit', async function (e) {
 			e.preventDefault();
@@ -530,9 +615,9 @@
 			formData.append('lat', uploadLatInput.value);
 			formData.append('lng', uploadLngInput.value);
 			formData.append('type', uploadDamageTypeSelect.value);
-			formData.append('severity', uploadSeveritySelect.value);
 			formData.append('description', uploadDescriptionTextarea.value);
 			if (manualUploadFileInput.files[0]) {
+				console.log(manualUploadFileInput.files[0])
 				formData.append('photo', manualUploadFileInput.files[0]);
 			}
 
@@ -541,7 +626,10 @@
 
 			await createReport(formData);
 			this.reset(); // Reset form
-			manualUploadFilePreview.innerHTML = ''; // Bersihkan preview file
+			analyzeBtn.disabled = true;
+			uploadDamageTypeSelect.disabled = true;
+			uploadDamageTypeSelect.value = "";
+			submitReportBtn.disabled = true;
 		});
 
 		// File input di Manual Upload Tab

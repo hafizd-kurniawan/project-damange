@@ -19,7 +19,7 @@ from .routers import (
     websockets_router,
 )  # Pastikan websockets_router diimpor
 from .routers import location_router
-from .routers.video_detector import LocalDetection
+from .services.detector_local_services import LocalDetection
 
 
 BASE_DIR = Path(__file__).resolve().parent

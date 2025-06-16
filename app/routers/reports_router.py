@@ -17,9 +17,9 @@ from ..schemas.report_schema import *
 # Impor service yang akan digunakan
 # from ..services.report_service import ReportService
 from ..services.report_services import ReportService
+from ..services.detector_services import analyze_image
 
 # Impor Enum dari model DB jika digunakan sebagai tipe di Form atau validasi
-from ..models.report_model import DamageSeverityEnum
 
 # Buat instance APIRouter
 # Semua endpoint yang didefinisikan dengan router ini akan memiliki prefix "/reports"
@@ -54,9 +54,6 @@ async def create_new_report_endpoint(
         max_length=100,
         description="Type of damage (e.g., road, bridge)",
     ),
-    severity: DamageSeverityEnum = Form(
-        ..., description="Severity of the damage (low, medium, high, critical)"
-    ),  # FastAPI akan memvalidasi string ke Enum
     description: Optional[str] = Form(
         None, max_length=500, description="Optional detailed description"
     ),
@@ -72,7 +69,6 @@ async def create_new_report_endpoint(
         lat=lat,
         lng=lng,
         type=type,  # Pydantic akan menggunakan alias ke 'damage_type' jika dikonfigurasi di skema
-        severity=severity,
         description=description,
     )
     try:
@@ -180,9 +176,7 @@ async def update_report_endpoint(
     type: Optional[str] = Form(
         None, min_length=3, max_length=100, alias="type_update"
     ),  # Gunakan alias berbeda jika perlu
-    severity: Optional[DamageSeverityEnum] = Form(None),
     description: Optional[str] = Form(None, max_length=500),
-    status: Optional[ReportStatusEnum] = Form(None),
     new_photo: Optional[UploadFile] = File(
         None, description="New photo to replace the existing one, if any"
     ),
@@ -202,12 +196,8 @@ async def update_report_endpoint(
         update_data_dict["damage_type"] = (
             type  # Pydantic akan handle alias 'type' di skema
         )
-    if severity is not None:
-        update_data_dict["severity"] = severity
     if description is not None:
         update_data_dict["description"] = description
-    if status is not None:
-        update_data_dict["status"] = status
 
     # Validasi dengan Pydantic model
     try:
@@ -260,6 +250,38 @@ async def delete_report_endpoint(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Terjadi error internal saat menghapus laporan {report_id}.",
+        )
+
+
+@router.post(
+    "/analyze-image",
+    response_model=AnalysisResponse,
+    summary="Analyze a single image for damage type",
+    description="Upload an image and the NanoDet model will return the detected damage type.",
+)
+async def analyze_damage_image_endpoint(
+    photo: UploadFile = File(..., description="Image file to be analyzed.")
+):
+    print("API Endpoint: Menerima request analyze_damage_image_endpoint")
+    try:
+        image_bytes = await photo.read()
+        # Panggil metode analisis dari service
+        encoded_image, detected_class = analyze_image(image_bytes)
+
+        # Kirim kembali hasil dalam format JSON yang ditentukan oleh AnalysisResponse
+        return AnalysisResponse(
+            detected_type=detected_class, image_base64=encoded_image
+        )
+
+    except ValueError as e:
+        # Jika gambar tidak valid
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        # Error lain saat deteksi
+        print(f"API Endpoint Error saat analisis gambar: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Terjadi kesalahan saat menganalisis gambar.",
         )
 
 

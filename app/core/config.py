@@ -1,12 +1,9 @@
-# app/core/config.py
 import os
 from pathlib import Path
 
 import yaml
 from pydantic import BaseModel, ValidationError
 
-# --- Path Configuration ---
-# File config.py ada di app/core/, jadi naik dua level untuk root proyek
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 CONFIG_FILE_PATH = PROJECT_ROOT / "config.yaml"
 
@@ -79,9 +76,9 @@ except (FileNotFoundError, ValueError, RuntimeError) as e:
     print(
         f"KRITIKAL: Gagal memuat konfigurasi aplikasi. Aplikasi akan berhenti. Error: {e}"
     )
-    raise SystemExit(
-        f"Konfigurasi aplikasi error: {e}"
-    )  # Hentikan aplikasi jika config gagal
+
+    # Hentikan aplikasi jika config gagal
+    raise SystemExit(f"Konfigurasi aplikasi error: {e}")
 
 
 # --- Ensure Upload Directory Exists ---
