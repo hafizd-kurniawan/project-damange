@@ -201,24 +201,75 @@
 
 		function renderPaginationControls(elementId, totalPages, currentPage, tableType) {
 			const paginationContainer = document.getElementById(elementId);
-			paginationContainer.innerHTML = '';
-			if (totalPages <= 1) return;
-
-			for (let i = 1; i <= totalPages; i++) {
-				const pageButton = document.createElement('button');
-				pageButton.textContent = i;
-				if (i === currentPage) pageButton.classList.add('active');
-				pageButton.addEventListener('click', async () => {
-					const newData = await fetchDamageReports(i, itemsPerPage);
-					if (tableType === 'damage') {
-						currentDamagePageOnMapTab = i;
-					} else {
-						currentReportsPageOnReportsTab = i;
-					}
-					renderAllComponents(newData, tableType); // Re-render semua termasuk marker
-				});
-				paginationContainer.appendChild(pageButton);
+			paginationContainer.innerHTML = ''; // Bersihkan tombol yang ada
+			const maxButtons = 5; // Maksimal tombol halaman yang ditampilkan
+			// Helper function to create a button
+			function createButton(text, pageNumber, isDisabled = false, isActive = false) {
+				const button = document.createElement('button');
+				button.textContent = text;
+				button.disabled = isDisabled;
+				if (isActive) {
+					button.classList.add('active');
+				}
+				if (isDisabled) {
+					button.classList.add('disabled:opacity-50', 'cursor-not-allowed');
+				} else {
+					button.addEventListener('click', async () => {
+						const newData = await fetchDamageReports(pageNumber, itemsPerPage);
+						if (tableType === 'damage') {
+							currentDamagePageOnMapTab = pageNumber;
+						} else {
+							currentReportsPageOnReportsTab = pageNumber;
+						}
+						renderAllComponents(newData, tableType);
+					});
+				}
+				return button;
 			}
+
+			// Tombol "Sebelumnya"
+			paginationContainer.appendChild(createButton('‹ Prev', currentPage - 1, currentPage === 1));
+
+			if (totalPages <= maxButtons) {
+				// Tampilkan semua halaman jika totalnya kurang dari atau sama dengan maxButtons
+				for (let i = 1; i <= totalPages; i++) {
+					paginationContainer.appendChild(createButton(i, i, false, i === currentPage));
+				}
+			} else {
+				// Logika untuk menampilkan elipsis
+				let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+				let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+				if (endPage - startPage + 1 < maxButtons) {
+					startPage = Math.max(1, endPage - maxButtons + 1);
+				}
+
+				if (startPage > 1) {
+					paginationContainer.appendChild(createButton(1, 1));
+					if (startPage > 2) {
+						const ellipsis = document.createElement('span');
+						ellipsis.textContent = '...';
+						ellipsis.className = 'px-4 py-2';
+						paginationContainer.appendChild(ellipsis);
+					}
+				}
+
+				for (let i = startPage; i <= endPage; i++) {
+					paginationContainer.appendChild(createButton(i, i, false, i === currentPage));
+				}
+
+				if (endPage < totalPages) {
+					if (endPage < totalPages - 1) {
+						const ellipsis = document.createElement('span');
+						ellipsis.textContent = '...';
+						ellipsis.className = 'px-4 py-2';
+						paginationContainer.appendChild(ellipsis);
+					}
+					paginationContainer.appendChild(createButton(totalPages, totalPages));
+				}
+			}
+			// Tombol "Berikutnya"
+			paginationContainer.appendChild(createButton('Next ›', currentPage + 1, currentPage === totalPages));
 		}
 
 
@@ -711,8 +762,7 @@
 		const stopRealtimeBtn = document.getElementById('stop-realtime-btn');
 		const captureRealtimeBtn = document.getElementById('capture-realtime-btn');
 		const toggleRealtimeBtn = document.getElementById('toggle-realtime-btn');
-		const realtimeDetectionContainer = document.getElementById('realtime-detection-container');
-		const WS_BASE_URL = BASE_URL + "/ws"
+		const WS_BASE_URL = BASE_URL + "ws"
 
 		let currentRealtimeStream = null;
 		let realtimeClientLocation = { lat: null, lon: null };
@@ -725,8 +775,118 @@
 			const now = Date.now();
 			if (now - lastTableUpdateTime > TABLE_UPDATE_INTERVAL) {
 				lastTableUpdateTime = now;
-				refreshActiveTabData(data); // ← fungsi kamu untuk update tab/tabel
+				refreshActiveTabData(data);
 			}
+		}
+
+		const detectionModeSelect = document.getElementById('detection-mode-select');
+		const realtimeToggleContainer = document.getElementById('realtime-toggle-container');
+		const realtimeDetectionContainer = document.getElementById('realtime-detection-container');
+		const localDetectionContainer = document.getElementById('local-detection-container');
+		const startLocalBtn = document.getElementById('start-local-btn');
+		const stopLocalBtn = document.getElementById('stop-local-btn');
+		const localStatus = document.getElementById('local-status');
+
+		let locationIntervalId = null;
+		function switchToLocalMode() {
+			realtimeToggleContainer.classList.add('hidden');
+			realtimeDetectionContainer.classList.add('hidden');
+			localDetectionContainer.classList.remove('hidden');
+			localStatus.textContent = "Status: Inactive";
+		}
+
+		function switchToWebSocketMode() {
+			realtimeToggleContainer.classList.remove('hidden');
+			realtimeDetectionContainer.classList.add('hidden');
+			localDetectionContainer.classList.add('hidden');
+
+			if (locationIntervalId) {
+				clearInterval(locationIntervalId);
+				locationIntervalId = null;
+			}
+		}
+
+		detectionModeSelect.addEventListener('change', (event) => {
+			const selectedMode = event.target.value;
+			if (selectedMode === 'local') {
+				switchToLocalMode();
+			} else if (selectedMode === 'websocket') {
+				switchToWebSocketMode();
+			}
+		});
+
+		function requestAndSendLocation() {
+			if (navigator.geolocation) {
+				navigator.geolocation.getCurrentPosition(
+					(position) => {
+						const lat = position.coords.latitude;
+						const lon = position.coords.longitude;
+						localStatus.textContent = `Status: Aktif (Lokasi: ${lat.toFixed(5)}, ${lon.toFixed(5)})`;
+						fetch("/location/update", {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({ lat, lon })
+						});
+					},
+					(err) => {
+						console.warn("Gagal ambil lokasi:", err.message);
+						localStatus.textContent = "Status: Gagal mengambil lokasi";
+					},
+					{ enableHighAccuracy: true }
+				);
+			} else {
+				localStatus.textContent = "Status: Geolocation tidak tersedia di perangkat ini.";
+			}
+		}
+
+		let refreshDetectionIntervalId = null; // ⬅️ Tambahan global variable
+
+		startLocalBtn.addEventListener('click', () => {
+			requestAndSendLocation(); // kirim dulu
+
+			setTimeout(() => {
+				fetch("/start-local-detection")
+					.then(() => {
+						localStatus.textContent = "Status: Jetson sedang mendeteksi...";
+						locationIntervalId = setInterval(requestAndSendLocation, 1000); // kirim lokasi per 1 detik
+
+						// ⬇️ Set interval untuk refresh data tabel deteksi tiap 3 detik
+						if (refreshDetectionIntervalId) clearInterval(refreshDetectionIntervalId);
+						refreshDetectionIntervalId = setInterval(() => {
+							const activeTabElement = document.querySelector('.tab-btn.active-tab');
+							let activeTabName = activeTabElement ? activeTabElement.dataset.tab : 'map';
+							updateDetectionTableIfAllowed(activeTabName);
+						}, 3000);
+					});
+			}, 1000); // beri jeda 1 detik supaya lokasi tersimpan
+		});
+
+		stopLocalBtn.addEventListener('click', () => {
+			fetch("/stop-local-detection")
+				.then(() => {
+					if (locationIntervalId) {
+						clearInterval(locationIntervalId);
+						locationIntervalId = null;
+					}
+
+					if (refreshDetectionIntervalId) {
+						clearInterval(refreshDetectionIntervalId);
+						refreshDetectionIntervalId = null;
+					}
+
+					localStatus.textContent = "Status: Inactive";
+					alert("Jetson menghentikan deteksi.");
+				})
+				.catch(() => {
+					localStatus.textContent = "Status: Error menghentikan deteksi";
+				});
+		});
+
+		// Inisialisasi: set mode default
+		if (detectionModeSelect.value === 'local') {
+			switchToLocalMode();
+		} else {
+			switchToWebSocketMode();
 		}
 
 		// Toggle realtime detection
@@ -883,10 +1043,6 @@
 				sendFrameIntervalId = null;
 			};
 		}
-
-
-
-
 
 
 

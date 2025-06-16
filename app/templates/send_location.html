@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+
+<head>
+	<title>Send Location to Backend</title>
+	<style>
+		body {
+			font-family: sans-serif;
+			padding: 20px;
+		}
+
+		.status {
+			color: green;
+			font-weight: bold;
+		}
+	</style>
+</head>
+
+<body>
+	<h2>📍 Lokasi akan dikirim otomatis ke server</h2>
+	<p class="status" id="status">Menunggu lokasi...</p>
+
+	<script>
+		const statusEl = document.getElementById("status");
+
+		function updateLocationPeriodically() {
+			if (navigator.geolocation) {
+				navigator.geolocation.getCurrentPosition(
+					(position) => {
+						fetch("/location/update", {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({
+								lat: position.coords.latitude,
+								lon: position.coords.longitude,
+							}),
+						})
+							.then(() => {
+								statusEl.textContent = `✅ Lokasi terkirim: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
+							})
+							.catch(() => {
+								statusEl.textContent = "❌ Gagal kirim lokasi.";
+							});
+					},
+					(err) => {
+						statusEl.textContent = "❌ Gagal ambil lokasi: " + err.message;
+					},
+					{ enableHighAccuracy: true }
+				);
+			} else {
+				statusEl.textContent = "❌ Geolocation tidak didukung.";
+			}
+		}
+
+		setInterval(updateLocationPeriodically, 1000);
+	</script>
+</body>
+
+</html>
